@@ -1,0 +1,21 @@
+Machine Learning Engineer - NLP (H/F)
+
+Lumen Analytics is a Paris start-up that builds document search for insurers.
+
+About the role
+You will train and ship the language models behind our search product, from data pipelines to monitoring in production.
+
+Requirements
+- 3+ years of experience building machine learning systems in production.
+- Strong Python and PyTorch.
+- Fluent English; French is a plus.
+- Master's degree in computer science or a related field.
+
+Nice to have
+- 5+ years with search or ranking systems.
+
+What we offer
+- CDI (permanent contract), based in Paris.
+- Hybrid: 2 days a week in our Paris office.
+- Salaire : 48 000 - 58 000 € brut annuel selon profil.
+- €1,000 yearly learning budget.

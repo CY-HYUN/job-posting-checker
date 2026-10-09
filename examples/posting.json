@@ -1,0 +1,46 @@
+{
+ "french": {
+  "verdict": "preferred",
+  "evidence": [
+   "[preferred] French is a plus."
+  ],
+  "english_signals": [],
+  "posting_language": "en"
+ },
+ "remote": {
+  "mode": "hybrid",
+  "france_eligible": "n/a",
+  "france_eligible_if_remote": "unclear",
+  "evidence": [],
+  "timezone": []
+ },
+ "contract": {
+  "type": "cdi",
+  "months": null,
+  "from": "text",
+  "evidence": [
+   "CDI (permanent contract), based in Paris."
+  ]
+ },
+ "salary": {
+  "min_eur_year": 48000,
+  "max_eur_year": 58000,
+  "monthly_in_text": false,
+  "vs_floor": "above",
+  "evidence": "Salaire : 48 000 - 58 000 € brut annuel selon profil."
+ },
+ "seniority": {
+  "min_years": 3,
+  "flags": [],
+  "evidence": [
+   "3+ years of experience building machine learning systems in production."
+  ],
+  "blockers": []
+ },
+ "suggested": {
+  "tier": "B",
+  "why": [
+   "3+ years asked (cap 2)"
+  ]
+ }
+}
