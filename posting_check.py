@@ -256,6 +256,9 @@ ELIGIBLE_DENY = {
     "D8 +/-N h of ET (N<=4) or PT (N<=7) (F,T)": r"(?:±|\+/-|\+-)\s*[0-4](?:\.\d)?\s*(?:hours?|hrs?|h)\s+(?:from|of)\s+(?:e[sd]?t|eastern)\b|(?:±|\+/-|\+-)\s*[0-7](?:\.\d)?\s*(?:hours?|hrs?|h)\s+(?:from|of)\s+(?:p[sd]?t|pacific)\b",
     "D9 location field ends with a non-France place (F)": GUARD + r"(?!.*\bnon[- ])(?!.*(?:^|;)\s*remote\s*(?:;|$)).*?(?:^|[,;(/\s-])\s*" + PX + r"(?:\s+time\s?zones?)?\s*(?:\(?\s*remote\s*\)?|-\s*remote|only)?\s*\)?\s*$",
     "D10 Europe/EMEA narrowed to countries without France (F,T)": r"^(?!.*\b(?:france|prefer\w*)\b).*\b(?:europe|emea|eu)\b[^.]{0,40}\b(?:in|including|:)\s+(?:the\s+)?(?:uk|united\s+kingdom|ireland|germany|spain|portugal|netherlands|poland|sweden|italy)\b",
+    # "New York, NY", "Austin, TX 78701": a city and a US state code (upper case only, so "in"/"or" stay words),
+    # outside France like D9's countries; before this they fell to "unclear" (2026-10-22)
+    "D12 location field ends with a city and a US state code (F)": GUARD + r".*,\s*(?-i:(?:AL|AK|AZ|AR|CA|CO|CT|DE|FL|GA|HI|ID|IL|IN|IA|KS|KY|LA|ME|MD|MA|MI|MN|MS|MO|MT|NE|NV|NH|NJ|NM|NY|NC|ND|OH|OK|OR|PA|RI|SC|SD|TN|TX|UT|VT|VA|WA|WV|WI|WY|DC))(?:\s+\d{5})?(?:\s*,\s*(?:usa?|united\s+states))?\s*$",
     "D11 France excluded by name (F,T)": r"\b(?:except|excluding|excluded|excl\.?|not\s+in|other\s+than|sauf|hors|ausgenommen)\s*[^.;)]{0,40}?\bfrance\b",
 }
 ELIGIBLE_UNCLEAR = {
@@ -288,7 +291,7 @@ FRANCE_PLACE = (r"\b(?:paris|france|[iî]le[- ]de[- ]france|lyon|lille|toulouse|
 # Vélizy-Villacoublay (78)", Indeed's "Courbevoie (92)" (Indeed 2026-10-04: two postings read as "place unclear").
 # Case-sensitive, so "une équipe de (12) personnes" is not a place.
 FRANCE_DEPT = re.compile(r"\b[A-ZÀ-Ý][\w'’-]*(?:[ -][A-ZÀ-Ý][\w'’-]*)*\s*\(\s*(?:0[1-9]|[1-8]\d|9[0-5]|2[AB]|97[1-6])\s*\)")
-FIELD_ONLY = {"D9 location field ends with a non-France place (F)", "U1 bare remote location (F)",
+FIELD_ONLY = {"D9 location field ends with a non-France place (F)", "D12 location field ends with a city and a US state code (F)", "U1 bare remote location (F)",
               "U2 bare global location (F)", "A1 location field names a France-containing region (F)"}
 _ELIG = {k: re.compile(v, I) for d in (ELIGIBLE_DENY, ELIGIBLE_UNCLEAR, ELIGIBLE_ALLOW) for k, v in d.items()}
 # A location label at the start of a line, read to the end of that line ("Location: Remote (U.S. only)").

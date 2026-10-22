@@ -6,7 +6,7 @@
 
 Reads a job posting and tells you, with the exact sentence behind each answer, whether you can take the job from France: is French required, is the role remote and open to someone living in France, what contract it is, whether the salary clears your floor, and how many years of experience it really asks for. A second script pulls open postings straight from companies' public careers APIs.
 
-Built for people job hunting in France who do not read French well. Postings here mix French and English ("Français courant", "French is a plus", "CDD de 18 mois", "3 500 € bruts mensuels"), and keyword search gets them wrong: "French company" is not a language rule, "apprentissage" is machine learning, "5+ years is a plus" is not an ask. The rules were written against real posting lines, and **512 labelled cases** in `tests/` pin them.
+Built for people job hunting in France who do not read French well. Postings here mix French and English ("Français courant", "French is a plus", "CDD de 18 mois", "3 500 € bruts mensuels"), and keyword search gets them wrong: "French company" is not a language rule, "apprentissage" is machine learning, "5+ years is a plus" is not an ask. The rules were written against real posting lines, and **520 labelled cases** in `tests/` pin them.
 
 Python 3.10+ (tested on 3.12), standard library only. No API keys.
 
@@ -100,7 +100,7 @@ python posting_check.py one.txt --title "<title printed above>" --location "<loc
 ## Tests
 
 ```bash
-python tests/test_posting_check.py   # 512/512 cases pass
+python tests/test_posting_check.py   # 520/520 cases pass
 python tests/test_ats_fetch.py       # selftest ok
 ```
 

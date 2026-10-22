@@ -406,10 +406,10 @@ REVIEW_REMOTE = [  # (text, location field, report field, expected)
     ("Fully remote role.", "Remote (Europe, except France)", "france_eligible", "no"),
     ("Fully remote role.\nWe hire anywhere in Europe except France.", "", "france_eligible", "no"),
     ("Fully remote role.\nLocation: Remote (U.S. only)", "", "france_eligible", "no"),
-    ("Fully remote role.\nLocation: St. Louis, MO", "", "france_eligible", "unclear"),
+    ("Fully remote role.\nLocation: St. Louis, MO", "", "france_eligible", "no"),  # rule D12 (2026-10-22): a city with a US state code is outside France; no rule caught it before
     ("Fully remote role. Our office locations: Austin, Paris and Tokyo.", "", "france_eligible", "unclear"),
     ("Acme | ML Engineer | REMOTE | Full-time", "", "mode", "remote"),
-    ("We build models for insurers.", "New York, NY", "france_eligible", "unclear"),
+    ("We build models for insurers.", "New York, NY", "france_eligible", "no"),  # rule D12 (2026-10-22): a city with a US state code is outside France; no rule caught it before
     # Indeed 2026-10-04: a French town with its département number names a place in France (no work-mode words,
     # so the mode stays unknown and only the place is settled); "basé sur", "basé en partie" and a town abroad do not
     ("Poste en CDI, basé à Vélizy Villacoublay (78).", "", "france_eligible", "yes"),
@@ -487,7 +487,7 @@ REVIEW3_TITLES = [("Machine Learning Intern", "internship"), ("Data Scientist In
                   ("Data Scientist - Stage", "internship")]
 REVIEW3_PLACE = [  # (text, location field, expected france_eligible, expected tier or None)
     ("Hybrid role, 3 days per week in the office. Permanent position.", "London", "unclear", "B"),
-    ("On-site role in our office. Permanent contract.", "Palo Alto, CA", "unclear", "B"),        # Mistral "AI Deployment Strategist - USA"
+    ("On-site role in our office. Permanent contract.", "Palo Alto, CA", "no", "C"),        # Mistral "AI Deployment Strategist - USA"; D12 (2026-10-22)
     ("Hybrid, 2 days a week in our Paris office. Permanent contract.", "", "n/a", "A"),
     ("Remote role. Our European team is growing; you must be based in the United States.", "Remote", "no", "C"),
     ("Remote (EMEA). Permanent contract.", "", "yes", "A"),
@@ -673,7 +673,13 @@ def run() -> int:
     for text, want in REVIEW5_YEARS:
         expect(f"years/review-5: {text[:50]}", pc.check(text)["seniority"]["min_years"], want)
     expect("tier: salary in dollars is a question", pc.check("Fully remote. Salary: $40,000 per year.", location="Worldwide")["suggested"]["tier"], "B")
-    expect("tier: US city, no work mode", pc.check("We build models for insurers.", location="New York, NY")["suggested"]["tier"], "B")
+    # 2026-10-22: a city with a US state code is outside France (rule D12); it read "unclear" (B) before
+    expect("tier: US city, no work mode", pc.check("We build models for insurers.", location="New York, NY")["suggested"]["tier"], "C")
+    for loc, want in (("New York, NY", "no"), ("San Francisco, CA", "no"), ("Austin, TX 78701", "no"), ("Seattle, WA, USA", "no"),
+                      ("Paris, France", "yes"), ("Lyon", "unclear"), ("Remote", "unclear")):
+        expect(f"state code field: {loc}", pc.check("Fully remote role.", location=loc)["remote"]["france_eligible"], want)
+    expect("state code field, EMEA in the text stays a question",
+           pc.check("Fully remote role. Candidates located anywhere in EMEA are welcome.", location="New York, NY")["remote"]["france_eligible"], "unclear")
     # 2026-10-14: a French posting that asks English as a skill works in French (Dassault, Banque de France, Renault)
     fr_base = ("Nous recherchons un ingénieur pour rejoindre notre équipe à Paris. Vous travaillerez avec les équipes produit et "
                "les data scientists sur des projets de machine learning. Le poste est en CDI, basé à Paris, avec deux jours de "
