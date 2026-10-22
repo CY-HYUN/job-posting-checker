@@ -1,0 +1,494 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>job-posting-checker demo</title>
+<meta name="description" content="Paste a job posting and see, with the sentence behind each answer, whether someone living in France can take the job.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f6f7f9; --surface: #ffffff; --sunken: #f9fafb; --fg: #111827; --muted: #5b6472; --faint: #8a93a1;
+    --line: #e5e7eb; --line-strong: #d1d5db;
+    --accent: #2f54eb; --accent-fg: #ffffff; --accent-soft: #eef2ff;
+    --good: #0f7a4d; --good-bg: #e8f6ef; --warn: #8a5300; --warn-bg: #fdf4e2; --bad: #b42318; --bad-bg: #fdeceb;
+    --neutral: #4b5563; --neutral-bg: #f1f2f4; --mark: #fde68a; --mark-focus: #fbbf24;
+    --shadow: 0 1px 2px rgba(17, 24, 39, .04), 0 4px 16px rgba(17, 24, 39, .06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0e1015; --surface: #161922; --sunken: #12151c; --fg: #e8eaf0; --muted: #a0a7b4; --faint: #7a8291;
+      --line: #262a35; --line-strong: #343947;
+      --accent: #8aa4ff; --accent-fg: #0b1230; --accent-soft: #1b2340;
+      --good: #6ad3a2; --good-bg: #12291f; --warn: #f2c063; --warn-bg: #2f2410; --bad: #ff8d84; --bad-bg: #321715;
+      --neutral: #b4bac6; --neutral-bg: #20242e; --mark: #5c4b0b; --mark-focus: #8a6d0c;
+      --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 6px 20px rgba(0, 0, 0, .25);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0e1015; --surface: #161922; --sunken: #12151c; --fg: #e8eaf0; --muted: #a0a7b4; --faint: #7a8291;
+    --line: #262a35; --line-strong: #343947;
+    --accent: #8aa4ff; --accent-fg: #0b1230; --accent-soft: #1b2340;
+    --good: #6ad3a2; --good-bg: #12291f; --warn: #f2c063; --warn-bg: #2f2410; --bad: #ff8d84; --bad-bg: #321715;
+    --neutral: #b4bac6; --neutral-bg: #20242e; --mark: #5c4b0b; --mark-focus: #8a6d0c;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 6px 20px rgba(0, 0, 0, .25);
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg);
+    font: 15.5px/1.6 Inter, system-ui, -apple-system, "Segoe UI", sans-serif; font-feature-settings: "cv11", "tnum"; -webkit-font-smoothing: antialiased; }
+  a { color: var(--accent); text-underline-offset: 2px; }
+  .topbar { border-bottom: 1px solid var(--line); background: var(--surface); }
+  .topbar-in { max-width: 1180px; margin: 0 auto; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 600; letter-spacing: -0.01em; }
+  .brand svg { color: var(--accent); }
+  .topbar a.src { display: inline-flex; align-items: center; gap: 6px; font-size: .88rem; font-weight: 500; color: var(--fg);
+    text-decoration: none; border: 1px solid var(--line-strong); border-radius: 8px; padding: 6px 12px; }
+  .topbar a.src:hover { border-color: var(--accent); color: var(--accent); }
+  main { max-width: 1180px; margin: 0 auto; padding: 36px 16px 64px; }
+  header { max-width: 68ch; margin-bottom: 28px; }
+  h1 { font-size: clamp(1.6rem, 1.2rem + 1.4vw, 2.1rem); line-height: 1.2; margin: 0 0 12px; letter-spacing: -0.02em; font-weight: 700; }
+  .lede { margin: 0 0 14px; color: var(--muted); font-size: 1.02rem; }
+  .facts { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 0; padding: 0; list-style: none; color: var(--muted); font-size: .86rem; }
+  .facts li { display: inline-flex; align-items: center; gap: 6px; }
+  .facts svg { color: var(--good); flex: none; }
+  .grid { display: grid; gap: 20px; }
+  .grid > * { min-width: 0; }  /* a grid item otherwise grows to its widest line and overflows a phone screen */
+  @media (min-width: 960px) { .grid { grid-template-columns: 1.08fr 1fr; align-items: start; } .result-panel { position: sticky; top: 16px; } }
+  .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 22px; box-shadow: var(--shadow); }
+  .panel-title { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin: 0 0 16px; font-size: .78rem;
+    font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--faint); }
+  .examples { margin-bottom: 18px; }
+  .examples-label { display: block; font-size: .86rem; color: var(--muted); margin-bottom: 8px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  button { font: inherit; cursor: pointer; border-radius: 8px; }
+  .chip-btn { border: 1px solid var(--line-strong); background: var(--surface); color: var(--fg); padding: 6px 12px; font-size: .86rem; font-weight: 500;
+    display: inline-flex; align-items: center; gap: 7px; }
+  .chip-btn:hover { border-color: var(--accent); }
+  .chip-btn[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+  .dot { width: 7px; height: 7px; border-radius: 50%; flex: none; }
+  .dot.A { background: var(--good); } .dot.B { background: var(--warn); } .dot.C { background: var(--bad); }
+  button:focus-visible, input:focus-visible, summary:focus-visible, .row:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  label { display: block; font-size: .82rem; font-weight: 500; color: var(--muted); margin: 0 0 5px; }
+  .fields { display: grid; gap: 12px; grid-template-columns: 1fr 1fr; margin-bottom: 16px; align-items: start; }
+  @media (min-width: 640px) { .fields { grid-template-columns: 1.4fr 1fr .8fr .8fr; } }
+  input { width: 100%; font: inherit; font-size: .94rem; color: var(--fg); background: var(--sunken); border: 1px solid var(--line-strong); border-radius: 8px; padding: 8px 10px; }
+  input:hover { border-color: var(--faint); }
+  .label-row { display: flex; justify-content: space-between; align-items: baseline; }
+  .count { font-size: .78rem; color: var(--faint); }
+  /* The posting box: a textarea over a backdrop that paints the evidence marks at the same positions. */
+  .editor { position: relative; border: 1px solid var(--line-strong); border-radius: 10px; background: var(--sunken); }
+  .editor:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .editor textarea, .editor .backdrop { font: inherit; font-size: .94rem; line-height: 1.6; padding: 12px 14px; margin: 0; border: 0;
+    white-space: pre-wrap; overflow-wrap: break-word; word-break: normal; letter-spacing: normal; }
+  .editor textarea { position: relative; display: block; width: 100%; height: 440px; resize: vertical; background: transparent;
+    color: var(--fg); outline: none; overflow-y: scroll; }
+  .editor .backdrop { position: absolute; top: 0; left: 0; right: 0; overflow-y: scroll; scrollbar-color: transparent transparent;
+    color: transparent; pointer-events: none; }
+  .backdrop mark { background: var(--mark); color: transparent; border-radius: 3px; }
+  .backdrop mark.focus { background: var(--mark-focus); box-shadow: 0 0 0 2px var(--mark-focus); }
+  .hint { margin: 10px 0 0; font-size: .84rem; color: var(--muted); display: flex; align-items: center; gap: 8px; }
+  .hint .spin { width: 12px; height: 12px; border: 2px solid var(--line-strong); border-top-color: var(--accent); border-radius: 50%; animation: spin .8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .field-hint { margin: 5px 0 0; font-size: .75rem; color: var(--faint); line-height: 1.35; }
+  .result-panel { transition: box-shadow .8s ease; }
+  .result-panel.updated { box-shadow: 0 0 0 2px var(--accent), var(--shadow); transition: box-shadow 0s; }
+  @media (prefers-reduced-motion: reduce) { .result-panel { transition: none; } .hint .spin { animation: none; } }
+  .ghost { border: 1px solid var(--line-strong); background: var(--surface); color: var(--fg); padding: 5px 12px; font-size: .82rem; font-weight: 500;
+    text-transform: none; letter-spacing: 0; display: inline-flex; align-items: center; gap: 6px; }
+  .ghost:hover { border-color: var(--accent); color: var(--accent); }
+  .ghost:disabled { opacity: .45; cursor: default; }
+  .verdict { display: grid; grid-template-columns: auto 1fr; gap: 14px; align-items: center; padding: 16px; border-radius: 12px; margin-bottom: 14px; }
+  .verdict.A { background: var(--good-bg); } .verdict.B { background: var(--warn-bg); } .verdict.C { background: var(--bad-bg); }
+  .tile { width: 52px; height: 52px; border-radius: 12px; display: grid; place-items: center; font-size: 1.6rem; font-weight: 700; color: #fff; }
+  .verdict.A .tile { background: var(--good); } .verdict.B .tile { background: var(--warn); } .verdict.C .tile { background: var(--bad); }
+  :root[data-theme="dark"] .tile, .dark-tile .tile { color: var(--bg); }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .tile { color: var(--bg); } }
+  .verdict-head { font-weight: 600; font-size: 1.05rem; line-height: 1.3; }
+  .verdict.A .verdict-head { color: var(--good); } .verdict.B .verdict-head { color: var(--warn); } .verdict.C .verdict-head { color: var(--bad); }
+  .verdict ul { margin: 4px 0 0; padding-left: 18px; color: var(--fg); font-size: .9rem; }
+  .verdict li { margin: 1px 0; }
+  .glance { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 6px; padding: 0; list-style: none; }
+  .glance li { display: inline-flex; align-items: center; gap: 5px; font-size: .78rem; font-weight: 500; padding: 3px 9px 3px 7px; border-radius: 999px; }
+  .meta { margin: 8px 0 4px; color: var(--faint); font-size: .8rem; }
+  .row { padding: 13px 10px; margin: 0 -10px; border-top: 1px solid var(--line); border-radius: 8px; }
+  .row[data-mark] { cursor: pointer; }
+  .row[data-mark]:hover { background: var(--sunken); border-top-color: transparent; }
+  .row[data-mark]:hover + .row { border-top-color: transparent; }
+  .row-head { display: flex; justify-content: space-between; gap: 12px; align-items: center; }
+  .row-name { font-weight: 600; font-size: .95rem; }
+  .badge { display: inline-flex; align-items: center; gap: 5px; font-size: .8rem; font-weight: 600; padding: 3px 10px 3px 8px; border-radius: 999px; text-align: right; }
+  .badge svg, .glance svg { flex: none; }
+  @media (min-width: 600px) { .badge { white-space: nowrap; } }
+  .good { color: var(--good); background: var(--good-bg); }
+  .warn { color: var(--warn); background: var(--warn-bg); }
+  .bad { color: var(--bad); background: var(--bad-bg); }
+  .neutral { color: var(--neutral); background: var(--neutral-bg); }
+  .evidence { margin: 7px 0 0; color: var(--muted); font-size: .88rem; }
+  .evidence q { color: var(--fg); quotes: "\201C" "\201D"; }
+  .gloss { margin: 4px 0 0; font-size: .82rem; color: var(--muted); }
+  .gloss b { color: var(--fg); font-weight: 600; }
+  .empty { color: var(--muted); padding: 28px 8px; text-align: center; font-size: .92rem; }
+  details { margin-top: 28px; max-width: 80ch; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 18px; }
+  summary { cursor: pointer; font-weight: 600; }
+  details ul { color: var(--muted); padding-left: 20px; margin: 12px 0 4px; font-size: .92rem; }
+  details li { margin: 7px 0; }
+  details b { color: var(--fg); }
+  footer { margin-top: 20px; color: var(--faint); font-size: .84rem; max-width: 80ch; }
+</style>
+</head>
+<body>
+<div class="topbar"><div class="topbar-in">
+  <span class="brand"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>job-posting-checker</span>
+  <a class="src" href="https://github.com/CY-HYUN/job-posting-checker"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .5a11.5 11.5 0 0 0-3.64 22.41c.58.1.79-.25.79-.56v-2c-3.2.7-3.88-1.37-3.88-1.37-.53-1.33-1.29-1.69-1.29-1.69-1.05-.72.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.77 2.71 1.26 3.37.96.1-.75.4-1.26.73-1.55-2.55-.29-5.24-1.28-5.24-5.68 0-1.25.45-2.28 1.19-3.08-.12-.29-.52-1.46.11-3.04 0 0 .97-.31 3.17 1.18a11 11 0 0 1 5.77 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.58.23 2.75.11 3.04.74.8 1.19 1.83 1.19 3.08 0 4.41-2.69 5.39-5.25 5.67.41.36.78 1.06.78 2.14v3.17c0 .31.21.67.8.56A11.5 11.5 0 0 0 12 .5z"/></svg>Source on GitHub</a>
+</div></div>
+<main>
+  <header>
+    <h1>Can someone living in France take this job?</h1>
+    <p class="lede">Paste a job posting. The checker reads it for the five things that decide it (French, place and remote scope, contract, salary, years) and shows the sentence behind every answer, highlighted in the posting.</p>
+    <ul class="facts">
+      <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>Rule-based, pinned by 512 labelled test cases, most from real postings</li>
+      <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>Reads French and English postings</li>
+      <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>Runs in your browser; the posting never leaves this page</li>
+    </ul>
+  </header>
+
+  <div class="grid">
+    <section class="panel" aria-label="Posting">
+      <h2 class="panel-title">Posting</h2>
+      <div class="examples" role="group" aria-label="Example postings">
+        <span class="examples-label">Try an example (invented postings), then edit any line and watch the result change.</span>
+        <div class="chips">
+        <button class="chip-btn" data-ex="en" aria-pressed="false"><span class="dot A" aria-hidden="true"></span>Paris ML engineer</button>
+        <button class="chip-btn" data-ex="fr" aria-pressed="false"><span class="dot C" aria-hidden="true"></span>Written in French</button>
+        <button class="chip-btn" data-ex="eu" aria-pressed="false"><span class="dot A" aria-hidden="true"></span>Remote across the EU</button>
+        <button class="chip-btn" data-ex="us" aria-pressed="false"><span class="dot C" aria-hidden="true"></span>US-only remote</button>
+        <button class="chip-btn" data-ex="phd" aria-pressed="false"><span class="dot C" aria-hidden="true"></span>Research scientist</button>
+        <button class="chip-btn" data-ex="closed" aria-pressed="false"><span class="dot C" aria-hidden="true"></span>Position filled</button>
+        </div>
+      </div>
+      <div class="fields">
+        <div><label for="title">Job title</label><input id="title" autocomplete="off" aria-describedby="title-hint"><p class="field-hint" id="title-hint">Read for senior, internship or PhD titles</p></div>
+        <div><label for="loc">Location field</label><input id="loc" autocomplete="off" aria-describedby="loc-hint"><p class="field-hint" id="loc-hint">Read for France or not, and remote scope</p></div>
+        <div><label for="floor">Min. salary €/yr</label><input id="floor" type="number" min="0" step="1000" value="40000"></div>
+        <div><label for="cap">Your years</label><input id="cap" type="number" min="0" max="40" placeholder="any"></div>
+      </div>
+      <div class="label-row"><label for="text">Posting text</label><span class="count" id="count"></span></div>
+      <div class="editor">
+        <div class="backdrop" id="backdrop" aria-hidden="true"></div>
+        <textarea id="text" spellcheck="false" placeholder="Paste the full posting here"></textarea>
+      </div>
+      <p class="hint" id="status" role="status"><span class="spin" aria-hidden="true"></span>Loading the checker (a few seconds on first visit)…</p>
+    </section>
+
+    <section class="panel result-panel" aria-label="Result">
+      <h2 class="panel-title">Result <button class="ghost" id="copy" disabled><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>Copy summary</button></h2>
+      <div id="result" aria-live="polite"><p class="empty">Pick an example or paste a posting to see the verdict.</p></div>
+    </section>
+  </div>
+
+  <details>
+    <summary>How it decides</summary>
+    <ul>
+      <li><b>French</b> is judged per clause, in French and English: "Français courant indispensable" is required, "French is a plus" is not, "French company" is not a language rule at all, and "n'est pas indispensable" negates the requirement.</li>
+      <li><b>Remote</b> roles must accept someone living in France: a country or region list with France, the EU or EMEA passes; "US only", "must reside in" or a time zone far from Paris does not. A bare "remote" stays unclear rather than passing.</li>
+      <li><b>Salary</b> is yearly gross euros; monthly pay is multiplied by 12. Bonuses, budgets, relocation and funding rounds are not salary, and another currency is left for you to convert.</li>
+      <li><b>Experience</b> is the largest minimum outside nice-to-have sections; "5+ years is a plus" is not an ask.</li>
+      <li><b>Tier</b> C means a hard blocker (French required, not open to France, internship, a closed posting, a required PhD or research record); B means something to check; A means nothing found. It is a draft: read the highlighted sentences before you decide.</li>
+    </ul>
+  </details>
+  <footer>The checker reads phrases, so it can miss a sentence it has never seen; the evidence is there so you can check it. Found a line it gets wrong? Open an issue on GitHub with the sentence.</footer>
+</main>
+
+<script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js"></script>
+<script>
+const RAW = "https://raw.githubusercontent.com/CY-HYUN/job-posting-checker/main/";
+// ?src= loads the checker from another URL, for testing a local copy before it is pushed
+const SRC = new URLSearchParams(location.search).get("src") || RAW + "posting_check.py";
+const EXAMPLES = {
+  en: { title: "Machine Learning Engineer - NLP", loc: "Paris, France", file: "examples/posting.txt" },
+  fr: { title: "Ingénieur Machine Learning (H/F)", loc: "Lyon", text:
+`Ingénieur Machine Learning (H/F)
+
+Nova Assurances est un assureur lyonnais qui automatise le traitement des sinistres.
+
+Vos missions
+- Concevoir et mettre en production des modèles de classification de documents.
+- Travailler avec les équipes métier au quotidien.
+
+Profil recherché
+- 5 ans d'expérience minimum en machine learning.
+- Maîtrise de Python et de SQL.
+- Français courant indispensable, anglais technique.
+
+Conditions
+- CDD de 18 mois, basé à Lyon, 2 jours de télétravail par semaine.
+- Rémunération : 3 500 € bruts mensuels.` },
+  eu: { title: "Data Scientist", loc: "Remote (Europe)", text:
+`Data Scientist
+
+Fernway is a travel-tech company with a fully distributed team across Europe.
+
+What you'll do
+- Build forecasting and pricing models for our booking platform.
+- Work with product teams to run and read A/B tests.
+
+What we look for
+- 2+ years of experience in data science or analytics.
+- Strong SQL and Python.
+- English is our working language.
+
+Where and how
+- Fully remote: you can work from anywhere in the EU.
+- Permanent contract with our local employer of record.
+- Salary: 50,000 - 62,000 EUR gross per year.` },
+  us: { title: "Applied AI Engineer", loc: "Remote (US)", text:
+`Applied AI Engineer
+
+Brightloop builds AI agents for customer support teams.
+
+What you'll do
+- Ship LLM features from prototype to production.
+- Own evaluation for our agent pipeline.
+
+Requirements
+- 2+ years of experience with Python and LLM APIs.
+- You must be based in the United States and authorized to work in the US.
+
+Compensation
+- $140,000 - $170,000 base salary plus equity.
+- This is a fully remote role across US time zones.` },
+  phd: { title: "Research Scientist, Language Models", loc: "Paris, France", text:
+`Research Scientist, Language Models
+
+Orbis Labs trains foundation models for scientific discovery.
+
+Requirements
+- PhD in computer science, machine learning or a related field.
+- Strong publication record at top-tier venues (NeurIPS, ICML, ICLR).
+- Experience with large-scale model training on GPU clusters.
+
+What we offer
+- CDI, based in our Paris office, 3 days on site.
+- Competitive salary and equity.` },
+  closed: { title: "Machine Learning Engineer", loc: "Paris, France", text:
+`Machine Learning Engineer
+
+This job is no longer accepting applications.
+
+Kestrel Health builds clinical decision support for hospitals.
+
+Requirements
+- 3+ years building machine learning systems.
+- Python, PyTorch.
+
+CDI, Paris. Salaire : 55 000 - 65 000 € brut annuel.` },
+};
+
+// The checker is for people who do not read French well: gloss the French terms that carry a verdict.
+const GLOSS = [["indispensable", "essential"], ["exigé", "required"], ["souhaité", "wanted"], ["apprécié", "a plus"],
+  ["courant", "fluent"], ["CDI", "permanent contract"], ["CDD", "fixed-term contract"], ["stage", "internship"],
+  ["alternance", "work-study"], ["bruts mensuels", "gross per month"], ["brut mensuel", "gross per month"],
+  ["brut annuel", "gross per year"], ["bruts annuels", "gross per year"], ["télétravail", "remote work"],
+  ["ans d'expérience", "years of experience"], ["Rémunération", "pay"], ["Salaire", "salary"]];
+
+const $ = id => document.getElementById(id);
+const textBox = $("text"), backdrop = $("backdrop"), status = $("status");
+let pyCheck = null, last = null, marks = [], timer = null;
+
+async function boot() {
+  try {
+    const py = await loadPyodide();
+    py.FS.writeFile("posting_check.py", await (await fetch(SRC)).text());
+    await py.runPythonAsync(`
+import json, posting_check
+def run(text, title, loc, floor, cap):
+    return json.dumps(posting_check.check(text, title=title, location=loc, salary_floor=floor, years_cap=cap), ensure_ascii=False)
+`);
+    pyCheck = py.globals.get("run");
+    status.textContent = "Ready. Edit the posting or the fields; the result follows as you type.";
+  } catch (e) {
+    status.textContent = "Could not load the checker in this browser: " + e.message;
+  }
+}
+
+async function loadExample(key) {
+  const ex = EXAMPLES[key];
+  document.querySelectorAll("[data-ex]").forEach(b => b.setAttribute("aria-pressed", b.dataset.ex === key));
+  $("title").value = ex.title; $("loc").value = ex.loc;
+  textBox.value = ex.text ?? await (await fetch(RAW + ex.file)).text();
+  textBox.scrollTop = 0;
+  countChars();
+  check();
+}
+
+const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+// Evidence lines carry a tag and a rule id ("[deny] ... (D2)"); keep the sentence only.
+const clean = s => String(s).replace(/^\[[^\]]+\]\s*/, "").replace(/\s*\(([A-Z]\d+|no rule)\)\s*$/, "").trim();
+const num = v => { const n = parseFloat(v); return isNaN(n) ? null : n; };
+const eur = n => "€" + Number(n).toLocaleString("en-US");
+
+function verdicts(r) {
+  const fr = r.french, re = r.remote, ct = r.contract, sa = r.salary, se = r.seniority;
+  const frMap = { required: ["Required", "bad"], preferred: ["A plus, not required", "warn"], not_required: ["Not required", "good"],
+                  not_mentioned: ["Not mentioned", "good"], unclear: ["Unclear: read the line", "warn"] };
+  let remote;
+  if (re.mode === "remote") remote = re.france_eligible === "yes" ? ["Remote, open to France", "good"]
+    : re.france_eligible === "no" ? ["Remote, not open to France", "bad"] : ["Remote, France unclear", "warn"];
+  else if (re.france_eligible === "no") remote = ["Outside France", "bad"];
+  else remote = [{ hybrid: "Hybrid", onsite: "On site" }[re.mode] || "Not stated", "neutral"];
+  const ctMap = { cdi: ["Permanent (CDI)", "good"], cdd: ["Fixed-term (CDD)" + (ct.months ? `, ${ct.months} months` : ""), "warn"],
+                  internship: ["Internship", "bad"], apprenticeship: ["Apprenticeship", "bad"], phd: ["PhD position", "bad"],
+                  vie: ["VIE", "bad"], freelance: ["Freelance", "warn"] };
+  const range = sa.min_eur_year ? (sa.max_eur_year && sa.max_eur_year !== sa.min_eur_year
+    ? `${eur(sa.min_eur_year)}–${eur(sa.max_eur_year).slice(1)}` : eur(sa.min_eur_year)) + " a year" : "";
+  const saMap = { above: [`${range}, above your floor`, "good"], straddles: [`${range}, around your floor`, "warn"],
+                  below: [`${range}, below your floor`, "bad"], no_floor_given: [range || "Stated", "neutral"],
+                  not_stated: ["Not stated", "neutral"], other_currency: ["In another currency: convert it", "warn"],
+                  daily_rate: ["A day rate (freelance)", "warn"] };
+  const capV = num($("cap").value);
+  const over = se.min_years != null && capV != null && se.min_years > capV;
+  const years = se.min_years != null ? [`${se.min_years}+ years asked` + (over ? ", more than yours" : ""), se.blockers.length ? "bad" : over ? "warn" : "neutral"]
+    : ["Not stated", "neutral"];
+  const rows = [];
+  if (r.closed) rows.push(["Posting", ["Closed", "bad"], [r.closed]]);
+  rows.push(
+    ["French", frMap[fr.verdict] || [fr.verdict, "neutral"], fr.evidence],
+    ["Work mode and France", remote, re.evidence],
+    ["Contract", ctMap[ct.type] || ["Not stated", "neutral"], ct.evidence],
+    ["Salary", saMap[sa.vs_floor] || [sa.vs_floor, "neutral"], sa.evidence ? [sa.evidence] : [],
+       sa.monthly_in_text ? "Converted from a monthly figure (×12)." : ""],
+    ["Experience", years, se.evidence.concat(se.blockers.map(b => "Blocker: " + (b.label || b)))],
+  );
+  if (se.flags.length) rows.push(["Flags", [se.flags.length + " flag" + (se.flags.length > 1 ? "s" : ""), "warn"], [], se.flags.map(cap).join(" · ")]);
+  return rows;
+}
+
+const ICON = { good: '<path d="M20 6L9 17l-5-5"/>', warn: '<path d="M12 8v5"/><path d="M12 16.5v.01"/>',
+               bad: '<path d="M18 6L6 18"/><path d="M6 6l12 12"/>', neutral: '<path d="M5 12h14"/>' };
+function icon(cls) {
+  const span = document.createElement("span");
+  span.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON[cls] || ICON.neutral}</svg>`;
+  return span.firstChild;
+}
+
+function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+
+function render(r) {
+  const out = $("result"); out.replaceChildren(); marks = [];
+  const tierName = r.suggested.tier;
+  const verdict = el("div", "verdict " + tierName), body = el("div");
+  verdict.append(el("div", "tile", tierName), body);
+  body.append(el("div", "verdict-head", { A: "No blocker found", B: "Check before you apply", C: "Blocker found" }[tierName] || "Tier " + tierName));
+  const why = r.suggested.why.map(w => cap(w).replace(/\.+$/, "")).filter(w => !/^No blocker found/i.test(w));
+  if (why.length) { const ul = el("ul"); why.forEach(w => ul.append(el("li", null, w))); body.append(ul); }
+  else body.append(el("div", "meta", "Still read the highlighted sentences before you decide."));
+  out.append(verdict);
+  const glance = el("ul", "glance");
+  for (const [name, [, cls]] of verdicts(r)) { const li = el("li", cls); li.append(icon(cls), name); glance.append(li); }
+  out.append(glance);
+  const langName = { fr: "French", en: "English", mixed: "French and English" }[r.french.posting_language];
+  out.append(el("p", "meta", (langName ? `Posting written in ${langName}. ` : "") + "Click a row to find its sentence."));
+  const gloss = r.french.posting_language !== "en";  // English postings use 'stage' and 'minimum' too
+  for (const [name, [label, cls], evidence, note] of verdicts(r)) {
+    const row = el("div", "row"), head = el("div", "row-head");
+    const badge = el("span", "badge " + cls); badge.append(icon(cls), label);
+    head.append(el("span", "row-name", name), badge);
+    row.append(head);
+    for (const ev of evidence.slice(0, 2)) {
+      const s = clean(ev); if (!s) continue;
+      if (/^location field:/i.test(s)) {
+        const tag = (String(ev).match(/^\[(\w+)\]/) || [])[1];
+        const rule = (String(ev).match(/\(([A-Z]\d+)\)\s*$/) || [])[1];
+        const read = { allow: "read as France or a region that includes it", deny: "read as outside France" }[tag]
+          || (/^U\d/.test(rule || "") ? "remote with no region named, so the posting text decides"
+              : "place not recognised, so the posting text decides");
+        row.append(el("p", "evidence", `Location field "${s.replace(/^location field:\s*/i, "")}": ${read}.`)); continue;
+      }
+      if (s.startsWith("Blocker: ")) { row.append(el("p", "evidence", s)); continue; }
+      const p = el("p", "evidence"); p.append(el("q", null, s)); row.append(p);
+      const g = gloss ? GLOSS.filter(([f]) => s.toLowerCase().includes(f.toLowerCase())) : [];
+      if (g.length) { const gp = el("p", "gloss"); gp.append("In English: ");
+        g.forEach(([f, en], i) => { if (i) gp.append(" · "); gp.append(el("b", null, f), " = " + en); }); row.append(gp); }
+      if (row.dataset.mark === undefined) row.dataset.mark = marks.length;
+      marks.push(s);
+    }
+    if (note) row.append(el("p", "evidence", note));
+    if (!evidence.length && !note) row.append(el("p", "evidence", "The posting does not say."));
+    if (row.dataset.mark !== undefined) {
+      row.tabIndex = 0; row.setAttribute("role", "button");
+      const go = () => focusMark(+row.dataset.mark);
+      row.addEventListener("click", go);
+      row.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); go(); } });
+    }
+    out.append(row);
+  }
+  paint();
+  $("copy").disabled = false;
+}
+
+function paint(focus = -1) {
+  const text = textBox.value, spans = [];
+  marks.forEach((s, k) => { const i = text.indexOf(s); if (i >= 0) spans.push([i, i + s.length, k]); });
+  spans.sort((a, b) => a[0] - b[0]);
+  backdrop.replaceChildren();
+  let pos = 0;
+  for (const [a, b, k] of spans) {
+    if (a < pos) continue;
+    const m = el("mark", k === focus ? "focus" : null, text.slice(a, b)); m.dataset.k = k;
+    backdrop.append(document.createTextNode(text.slice(pos, a)), m); pos = b;
+  }
+  backdrop.append(document.createTextNode(text.slice(pos) + "\n"));  // a trailing newline keeps the last line's height
+  backdrop.scrollTop = textBox.scrollTop;
+}
+
+function focusMark(k) {
+  paint(k);
+  const m = backdrop.querySelector(`mark[data-k="${k}"]`);
+  if (!m) return;
+  textBox.scrollTop = Math.max(0, m.offsetTop - textBox.clientHeight / 3);
+  backdrop.scrollTop = textBox.scrollTop;
+}
+
+function check() {
+  if (!pyCheck) return;
+  const text = textBox.value.trim();
+  if (text.length < 200) {
+    $("result").replaceChildren(el("p", "empty", "Paste the whole posting (at least 200 characters) so the rules have context."));
+    marks = []; paint(); $("copy").disabled = true; last = null; return;
+  }
+  const capV = num($("cap").value);
+  last = JSON.parse(pyCheck(text, $("title").value, $("loc").value, num($("floor").value), capV == null ? null : Math.round(capV)));
+  render(last);
+  const panel = document.querySelector(".result-panel");
+  panel.classList.add("updated"); requestAnimationFrame(() => requestAnimationFrame(() => panel.classList.remove("updated")));
+  status.textContent = "Checked " + new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit" }) + ". Edit anything to check again.";
+}
+
+function summary() {
+  const lines = [`${$("title").value || "Posting"}: tier ${last.suggested.tier} (${last.suggested.why.join("; ")})`];
+  for (const [name, [label], evidence] of verdicts(last)) {
+    const q = evidence.map(clean).find(s => s && !/^location field:/i.test(s));
+    lines.push(`- ${name}: ${label}` + (q ? ` ("${q}")` : ""));
+  }
+  return lines.join("\n");
+}
+
+$("copy").addEventListener("click", async () => {
+  try { await navigator.clipboard.writeText(summary()); $("copy").textContent = "Copied"; }
+  catch { $("copy").textContent = "Copy failed"; }
+  setTimeout(() => { $("copy").textContent = "Copy summary"; }, 1500);
+});
+const later = () => { clearTimeout(timer); timer = setTimeout(check, 250); };
+const countChars = () => { $("count").textContent = textBox.value.length ? textBox.value.length.toLocaleString("en-US") + " characters" : ""; };
+textBox.addEventListener("input", countChars);
+textBox.addEventListener("input", () => { document.querySelectorAll("[data-ex]").forEach(b => b.setAttribute("aria-pressed", false)); paint(); later(); });
+textBox.addEventListener("scroll", () => { backdrop.scrollTop = textBox.scrollTop; });
+["title", "loc", "floor", "cap"].forEach(id => $(id).addEventListener("input", later));
+new ResizeObserver(() => { backdrop.style.height = textBox.offsetHeight + "px"; }).observe(textBox);
+document.querySelectorAll("[data-ex]").forEach(b => b.addEventListener("click", () => loadExample(b.dataset.ex)));
+boot().then(() => loadExample("en"));
+</script>
+</body>
+</html>
