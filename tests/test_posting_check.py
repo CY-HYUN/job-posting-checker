@@ -106,6 +106,9 @@ CONTRACT = [
     ("Poste en alternance (rythme 3 semaines / 1 semaine)", "", "apprenticeship"),
     ("This is a permanent position based in Paris.", "", "cdi"),
     ("You will work with external contractors and our data team.", "", "unknown"),
+    # freelance named as a source of the candidate's experience (NewRocket graduate role, 2026-10-21)
+    ("Experience: 1–3 years of relevant experience through internships, academic projects, research, freelance work, or professional roles", "", "unknown"),
+    ("Freelance experience counts.", "", "unknown"),
     ("Freelance mission de 6 mois, TJM selon profil", "", "freelance"),
     ("Join our research team.", "Doctoral student (CIFRE) - LLM evaluation", "phd"),
     # live postings, 2026-09-27: the English word "these" is not a French thesis
@@ -210,6 +213,7 @@ REMOTE = [  # (line, expected france_eligible, field or text, where it was found
 REVIEW_FRENCH = [
     ("Excellent written and spoken English; French is not a must.", N),
     ("Maîtrise du français non requise", N),
+    ("La maîtrise parfaite du français n’est pas indispensable à votre arrivée, dès lors que la communication est fluide.", N),  # Aneo
     ("You speak English fluently; knowing French would be nice.", P),
     ("Our team speaks French, English, and Spanish.", U),
     ("Fluent French required, a PhD is not required.", R),
@@ -224,6 +228,11 @@ REVIEW_FRENCH = [
     ("French isn't required.\nLanguage lessons in English and French\nInternational English-speaking team", N),
 ]
 REVIEW_CONTRACT = [
+    # job-search audit 2026-10-17 (CHK-3): the candidate's past internship or a thesis alternative is not the offer
+    ("This includes school projects and previous internship/work experience.", "unknown"),               # Skypher
+    ("Nice to have: An internship or thesis in NLP.", "unknown"),                                          # OVH
+    ("Une première expérience (en stage ou alternance ou poste) en data science.", "unknown"),            # Valeo
+    ("Stage de 6 mois en data science à partir de février.", "internship"),
     ("CDI. Vous concevrez des modèles d'apprentissage automatique.", "cdi"),
     ("CDI - Ingénieur Machine Learning. Expertise en apprentissage profond.", "cdi"),
     ("CDI. Bon équilibre vie pro / vie perso.", "cdi"),
@@ -332,11 +341,59 @@ INDEED_FLAGS = [  # (text, flag, expected present)
     ("PhD or equivalent research experience in Computer Science, Machine Learning, Computer Graphics, Computer Vision, or a "
      "closely related discipline.", "PhD required", False),
     ("PhD in Computer Science, Linguistics, or related field (or equivalent experience)", "PhD required", False),
+    ("Doctorat (ou niveau équivalent) en informatique, intelligence artificielle, machine learning, bioinformatique ou "
+     "discipline connexe.", "PhD required", False),                                                     # Institut Curie
+    ("Doctorat (PhD) avec une forte expérience en bio-informatiques et analyse de données OMICS ;", "PhD required", True),  # IHU ICAN
     ("Qualifications:\nA PhD in Computer Science, Machine Learning, or a related field, with publications in top-tier venues "
      "(e.g., NeurIPS, ICML, ICLR, ACL, EMNLP).", "PhD required", True),                                   # Cohere Agent Code
     ("This is a senior, research-oriented role for someone who wants to develop novel approaches.",
      "the posting calls the role senior", True),                                                           # Nucs AI
     ("You will work closely with senior engineers and researchers.", "the posting calls the role senior", False),
+    # the hire named in the body, real lines (audit 2026-10-17: hide them)
+    ("We are looking for a technical, execution-focused Senior Data Scientist (Clinical Data) to bridge the gap.",
+     "the posting calls the role senior", True),                                                           # Bioptimus
+    ("We are seeking a senior-level AI Engineer, Marketing to lead the design of AI-powered workflows.",
+     "the posting calls the role senior", True),                                                           # PMI
+    ("We are seeking a senior technical leader who combines a deep mastery of modern AI ecosystems.",
+     "the posting calls the role senior", True),                                                           # Shift Technology
+    ("At Cohere, we're seeking a senior engineer who understands the product.", "the posting calls the role senior", True),
+    ("On a besoin d'un renfort senior pour accompagner cette transition.", "the posting calls the role senior", True),  # Agicap
+    ("Orbitant seeks mid and senior-level AI Engineers to develop production-grade systems.",
+     "the posting calls the role senior", False),                                                          # several levels
+    ("Seniority level: Mid-Senior Level", "the posting calls the role senior", False),                     # LinkedIn label
+    ("Vous rencontrerez ensuite un consultant senior (manager ou practice leader) idéalement sur site.",
+     "the posting calls the role senior", False),                                                          # the interviewer
+    ("Lead client engineering engagements at senior level and drive alignment.", "the posting calls the role senior", False),
+    # Stability AI on Himalayas, 2026-10-14 (a senior posting a sweep let through)
+    ("Qualifications\nStrong academic research track record in computer vision, computer graphics, machine learning, "
+     "generative modeling, or a related field.", "research track record required", True),
+    ("Requirements\nA strong publication record at top venues.", "research track record required", True),
+    ("Highly Desirable\nA research track record in generative modeling.", "research track record required", False),
+    ("Proven track record of shipping ML models to production.", "research track record required", False),
+    ("A publication record is a plus.", "research track record required", False),
+    ("Strong publication record or demonstrated research potential", "research track record required", False),  # Cohere
+    # Cohere's boards, 2026-10-18 (a research-record requirement)
+    ("- Track record of work on generalization, robustness, or distribution shift, through publications or shipped models.",
+     "research track record required", True),                                                     # Post-Training RL
+    ("- One or more papers at top-tier venues (such as NeurIPS, ICML, ICLR, AIStats, MLSys, JMLR).",
+     "research track record required", True),                                                     # Data Analysis and Evaluation
+    ("- Hands-on experience training large language models (LLMs) on distributed training infrastructures.",
+     "large-scale model training required", True),
+    ("- Experience using large-scale distributed training strategies.", "large-scale model training required", True),  # Modeling
+    ("- Hands on experience on training large model at scale and having contributed to the tooling.",
+     "large-scale model training required", True),                                                # Training Infra
+    ("- Design, run, and analyse large-scale RL post-training experiments (e.g., RLHF, RL from verifiable rewards).",
+     "large-scale model training required", True),
+    ("Experience fine-tuning LLMs with LoRA or similar methods.", "large-scale model training required", False),
+    ("Deploy and monitor models at scale in production.", "large-scale model training required", False),
+    ("- Experience with distributed training (e.g., JAX, PyTorch, FSDP, Megatron) is a plus.",
+     "large-scale model training required", False),                                               # Cohere RL, a plus
+    ("Nice to have\nExperience with large-scale distributed training.", "large-scale model training required", False),
+    ("You will serve our models to millions of users at scale.", "large-scale model training required", False),
+    ("Responsibilities: User support and training: technical guidance for deploying large-scale AI workflows on HPC systems; "
+     "develop training materials and workshops.", "large-scale model training required", False),  # census 2026-10-18
+    ("Own training end to end: Build and maintain the training pipelines for large-scale model training, from data to "
+     "distributed runs.", "large-scale model training required", True),                            # Gradium research scientist
 ]
 REVIEW_REMOTE = [  # (text, location field, report field, expected)
     ("You must be comfortable working with clients based in the US.", "Remote - Europe", "france_eligible", "yes"),
@@ -395,6 +452,17 @@ REVIEW_YEARS = [
     ("German is a plus. 5+ years of experience required.", 5),
     ("Fort de 20 ans d'expérience, notre cabinet accompagne les grands comptes.\nVous avez 2 ans d'expérience en data science.", 2),
     ("With 15 years of experience in fintech, we serve 3M users.", None),
+    # spelled numbers (Synthesia Roleplay Sessions, 2026-10-14: read as 2 years; a senior posting)
+    ("- At least seven (7) years of experience as a software engineer, with at least 2 years at senior level.", 7),
+    ("Five years of experience in machine learning is required.", 5),
+    ("Our seven offices across Europe are hiring.", None),
+    # job-search audit 2026-10-17 (CHK-2): preferences, graduate alternatives and senior levels are not the ask
+    ("Preferably 5+ years of experience in computer vision.", None),                                        # DocuSketch
+    ("Expérience idéalement supérieure à 3 ans en simulation numérique.", None),                           # Dassault
+    ("4–6 years of experience (or a strong recent graduate with exceptional projects).", None),           # Aline
+    ("5-6 years for senior levels; we also hire juniors.", None),                                          # Harmattan
+    ("Bonus points\n5+ years with Rust.", None),
+    ("3+ years of experience in Python, preferably in ML.", 3),            # the preference is about ML, the 3 years stay
 ]
 
 
@@ -411,6 +479,9 @@ REVIEW3_FRENCH = [
     ("Good knowledge of the French AI regulatory landscape (AI Act, CNIL).", M),
     ("Anglais courant, le français est un plus", P),
     ("Vous parlez français et anglais", R),
+    # job-search audit 2026-10-17 (CHK-8): English joined to French is required French
+    ("Excellent written communication in English and French (C1 minimum)", R),                           # Sorare
+    ("Strong communication skills in English and French.", R),
 ]
 REVIEW3_TITLES = [("Machine Learning Intern", "internship"), ("Data Scientist Intern (6 months)", "internship"),
                   ("Data Scientist - Stage", "internship")]
@@ -508,6 +579,22 @@ WORK_MODE = [  # (text, mode)
 ]
 
 
+# A posting written in French : only a stated French
+# requirement is tier C; every other French-written posting is B, with the English signal named in its reason.
+_FR = ("Nous recherchons un ingénieur IA pour rejoindre notre équipe à Paris. Vous concevrez des agents et des pipelines "
+       "de données avec les équipes métiers, en CDI, avec deux jours de télétravail par semaine. ")
+FRENCH_POSTING_TIER = [
+    (_FR + "Vous avez le sens du travail en équipe.", "B"),                                        # Illuin, Modjo
+    (_FR + "Vous parlez anglais couramment.", "B"),                                                # English as a skill
+    (_FR + "Construire une équipe internationale composée de collaborateurs issus de 25 pays différents.", "B"),  # Pennylane
+    (_FR + "Former et accompagner les équipes multisites (Brésil, Tunisie, Portugal, Allemagne, Mexique, USA).", "B"),  # Sagemcom
+    (_FR + "La langue de travail de l'équipe est l'anglais.", "B"),
+    (_FR + "Rejoindre un groupe de dimension internationale.", "B"),
+    (_FR + "Français courant exigé.", "C"),                                                         # a stated requirement
+    (_FR + "Maîtrise du français et de l'anglais indispensable.", "C"),
+]
+
+
 def run() -> int:
     bad = total = 0
 
@@ -587,6 +674,18 @@ def run() -> int:
         expect(f"years/review-5: {text[:50]}", pc.check(text)["seniority"]["min_years"], want)
     expect("tier: salary in dollars is a question", pc.check("Fully remote. Salary: $40,000 per year.", location="Worldwide")["suggested"]["tier"], "B")
     expect("tier: US city, no work mode", pc.check("We build models for insurers.", location="New York, NY")["suggested"]["tier"], "B")
+    # 2026-10-14: a French posting that asks English as a skill works in French (Dassault, Banque de France, Renault)
+    fr_base = ("Nous recherchons un ingénieur pour rejoindre notre équipe à Paris. Vous travaillerez avec les équipes produit et "
+               "les data scientists sur des projets de machine learning. Le poste est en CDI, basé à Paris, avec deux jours de "
+               "télétravail par semaine. ")
+    expect("tier: French posting, English as a skill", pc.check(fr_base + "Maîtrise de l'anglais, à l'écrit comme à l'oral, "
+           "indispensable.", location="Paris, France")["suggested"]["tier"], "B")   # rule withdrawn 2026-10-14
+    expect("tier: French posting, international team, no English line", pc.check(fr_base + "Vous rejoindrez une équipe "
+           "internationale composée de collaborateurs issus de 25 pays.", location="Paris, France")["suggested"]["tier"], "B")
+    expect("tier: French posting, team works in English", pc.check(fr_base + "Vous maîtrisez l'anglais. La langue de travail "
+           "de l'équipe est l'anglais.", location="Paris, France")["suggested"]["tier"], "B")
+    expect("tier: English posting asking English stays A", pc.check("We are hiring an ML engineer in Paris, France. CDI, "
+           "hybrid. You will build and evaluate models with our product team. Fluent English is required.", location="Paris, France")["suggested"]["tier"], "A")
     # An empty or near-empty posting (a failed fetch) must not come back as tier A.
     with tempfile.NamedTemporaryFile("w", suffix=".txt", delete=False, encoding="utf-8") as f:
         f.write("Apply now")
@@ -625,7 +724,21 @@ def run() -> int:
                            ("Confirmed Machine Learning Engineer (Productivity)", True), ("Experienced Data Scientist", True),
                            ("AI/ML TECHNICAL LEADER (H/F)", True), ("Data Scientist, Leadership Analytics", False)]:
         expect(f"senior title: {title}", "senior title" in pc.check("We build models.", title=title)["seniority"]["flags"], flagged)
+    # A careers page that answers 200 with "the job is filled" is a closed posting (BCG X, Allianz, 2026-10-21)
+    for text in ("We're sorry… the job you are trying to apply for has been filled. Explore our teams.",
+                 "Nous sommes désolés... Le poste pour lequel vous essayez de postuler a été pourvu."):
+        expect(f"closed page: {text[:40]}", pc.check(text + " We build ML systems in Paris.")["suggested"]["tier"], "C")
+    expect("an open posting is not closed", pc.check("We are hiring an ML Engineer in Paris on a permanent contract.")["suggested"]["tier"], "A")
+    # A careers-site footer is not the offer (Dassault Systèmes, 2026-10-21)
+    expect("footer internship line", pc.check("Be part of the future of our workforce – check out internship and job opportunities.")["contract"]["type"], "unknown")
+    expect("an internship offer is still one", pc.check("This is a 6-month internship in our Paris lab.")["contract"]["type"], "internship")
+    # A required PhD, research record or large-scale training is a blocker, not a flag to check (tier C)
+    expect("tier: PhD required", pc.check("Requirements\n- PhD in computer science, machine learning or a related field.\nCDI in Paris.", location="Paris, France")["suggested"]["tier"], "C")
+    expect("tier: MSc or PhD is not a blocker", pc.check("Requirements\n- An MSc or PhD in machine learning or a related field.\nCDI in Paris.", location="Paris, France")["suggested"]["tier"], "A")
     # A case list defined twice runs only its last copy: 2026-09-29 a new REVIEW5_YEARS (then REVIEW6_YEARS) above
+    for text, want in FRENCH_POSTING_TIER:
+        expect(f"french posting tier: {text[:50]}", pc.check(text)["suggested"]["tier"], want)
+
     # an older one of the same name never ran, and its cases read as passing
     import ast
     names = [t.id for node in ast.parse(Path(__file__).read_text(encoding="utf-8")).body if isinstance(node, ast.Assign)

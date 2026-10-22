@@ -5,7 +5,12 @@
    "[preferred] French is a plus."
   ],
   "english_signals": [],
-  "posting_language": "en"
+  "posting_language": "en",
+  "english_skill": [
+   "Fluent English;"
+  ],
+  "english_workplace": [],
+  "international_team": []
  },
  "remote": {
   "mode": "hybrid",
@@ -37,6 +42,7 @@
   ],
   "blockers": []
  },
+ "closed": "",
  "suggested": {
   "tier": "B",
   "why": [

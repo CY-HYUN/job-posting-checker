@@ -61,7 +61,7 @@ LANGUAGE_CUE = (r"speak|spoken|written|writ|oral|verbal|fluen|proficien|command|
                 r"|know|connaissance|skill|comp[ée]tence|francophone|\b(in|en) (french|fran[cç]ais)\b|clients? fran[cç]ais"
                 r"|\bfrench (meetings?|presentations?|documentation|writing|client|speaker)"
                 # the language as the subject: "French is a plus", "Français requis", "French: B2", "French (reading)"
-                r"|\b(french|fran[cç]ais)\s*(is\b|isn'?t\b|required|mandatory|preferred|needed|essential|compulsory|would"
+                r"|\b(french|fran[cç]ais)\s*(is\b|isn'?t\b|est\b|n'est\b|required|mandatory|preferred|needed|essential|compulsory|would"
                 r"|requis|obligatoire|exig|indispensable|souhait|appr[ée]ci|:|\(|/)")
 # "French degree", "Université française", "Formation en France": a French qualification, not a language
 # requirement unless the sentence also names the language skill.
@@ -77,9 +77,11 @@ NOT_REQUIRED = [
     r"\bno french\b", r"\bwithout (speaking )?french\b", r"\bnon[- ]?francophone",
     r"\b(is ?n[o']t|not|isn't|aren't|never)\b[^.]{0,15}\b(required|mandatory|necessary|needed|a requirement|a must)\b",
     r"\bnot\s+a\s+must\b", r"\boptional\b",
-    r"\b(pas|non)\b[^.]{0,20}\b(requise?s?|obligatoires?|n[ée]cessaires?|exig[ée]e?s?)\b",
+    # "La maîtrise parfaite du français n’est pas indispensable à votre arrivée" (Aneo, 2026-10-14)
+    r"\b(pas|non)\b[^.]{0,20}\b(requise?s?|obligatoires?|n[ée]cessaires?|exig[ée]e?s?|indispensables?)\b",
     r"\bn'est pas\b[^.]{0,20}\b(requise?s?|obligatoires?|n[ée]cessaires?|exig[ée]e?s?)\b",
     r"\bno need (to speak|for)\b", r"\bdon'?t (need to )?speak french", r"pas besoin",
+    r"\bpas une obligation\b", r"\bun confort\b",   # "Le français est un confort, pas une obligation" (2026-10-14)
 ]
 EITHER = [r"(french|fran[cç]ais)\s+(or|ou)\s+(english|anglais)", r"(english|anglais)\s+(or|ou)\s+(french|fran[cç]ais)"]
 OTHER_LANGUAGE = (r"\b(anglais|english|espagnol|spanish|allemand|german|italien|italian|arabe|arabic|chinois|chinese"
@@ -118,7 +120,8 @@ def _label_clause(c: str) -> str:
     if _any(EITHER, c):
         return "not_required"
     if (re.search(r"\b(?:support|work|serve|communicat|interact|help|assist|deal)\w*\b[^.]{0,40}\b(?:in|en) (?:english|anglais)\b", c, I)
-            and not re.search(r"\b(in|en) (french|fran[cç]ais)\b", c, I)):
+            and not re.search(r"\b(in|en) (french|fran[cç]ais)\b", c, I)
+            and not re.search(r"\b(?:english|anglais)\s+(?:and|et|&)\s+(?:french|fran[cç]ais)\b", c, I)):
         return "not_required"                     # "You will support our French clients in English."
     if _any(PREFERRED, c):
         return "preferred"
@@ -163,6 +166,17 @@ def french_sentence(s: str) -> str | None:
     if _any(PREFERRED, tail):
         return "preferred"
     return "unclear"
+
+
+# English as a skill in a French posting ("Anglais courant", "Maîtrise de l'anglais ... indispensable"), against a team that
+# works in English ("la langue de travail est l'anglais"); 2026-10-14
+ENGLISH_SKILL = r"\b(?:anglais|english)\b"
+# The team, not the company: "équipe internationale ... 25 pays" (Pennylane), "équipes multisites (Brésil, ...)"
+# (Sagemcom); "un groupe de dimension internationale" is the company and does not count (2026-10-14 pool)
+INTERNATIONAL_TEAM = (r"\b[ée]quipes? (?:internationales?|multiculturelles?)\b|\binternational team\b|\bmultisites?\b"
+                      r"|\bissus de \d+ pays\b|\b\d+ nationalit[ée]s\b|\benvironnement (?:multiculturel|international)\b")
+ENGLISH_WORKPLACE = (r"langue de travail[^.]{0,30}\banglais\b|\bworking language\b[^.]{0,20}\benglish\b|\ben anglais au quotidien\b"
+                     r"|\b100 ?% (?:en )?anglais\b|\b[ée]quipe anglophone\b|\benglish[- ]speaking (?:team|environment)\b")
 
 
 def posting_language(text: str) -> str:
@@ -266,7 +280,10 @@ ELIGIBLE_ALLOW = {
 }
 # A place in France named anywhere in the posting: the job is there, whatever the work mode.
 FRANCE_PLACE = (r"\b(?:paris|france|[iî]le[- ]de[- ]france|lyon|lille|toulouse|nantes|bordeaux|marseille|grenoble"
-                r"|rennes|sophia[- ]antipolis|montpellier|strasbourg|nice|saclay|la d[ée]fense)\b")
+                r"|rennes|sophia[- ]antipolis|montpellier|strasbourg|nice|saclay|la d[ée]fense"
+                # the Paris area's business suburbs, written bare by company boards (25 of 32 were read as abroad,
+                # 2026-10-18 check)
+                r"|boulogne[- ]billancourt|issy[- ]les[- ]moulineaux|courbevoie|puteaux|nanterre|levallois[- ]perret|neuilly[- ]sur[- ]seine|clichy|saint[- ]ouen|saint[- ]denis|saint[- ]cloud|rueil[- ]malmaison|suresnes|montrouge|ch[aâ]tillon|malakoff|vanves|meudon|s[eè]vres|clamart|antony|le plessis[- ]robinson|ivry[- ]sur[- ]seine|vitry[- ]sur[- ]seine|montreuil|pantin|aubervilliers|noisy[- ]le[- ]grand|massy|palaiseau|orsay|gif[- ]sur[- ]yvette|les ulis|courtaboeuf|evry|[ée]vry|v[ée]lizy[- ]villacoublay|v[ée]lizy|guyancourt|[ée]lancourt|saint[- ]quentin[- ]en[- ]yvelines|versailles|saint[- ]germain[- ]en[- ]laye|rungis|cr[ée]teil|marne[- ]la[- ]vall[ée]e|cergy)\b")
 # A capitalised town followed by its French département number names a place in France: "basé à
 # Vélizy-Villacoublay (78)", Indeed's "Courbevoie (92)" (Indeed 2026-10-04: two postings read as "place unclear").
 # Case-sensitive, so "une équipe de (12) personnes" is not a place.
@@ -385,10 +402,16 @@ CONTRACT = [
 NOT_THIS_CONTRACT = {
     "cdi": r"possibilit[ée] de|[àa] l'issue|after the internship|pr[ée][- ]embauche|pre[- ]hire",
     "cdd": r"possibilit[ée] de|[àa] l'issue|after the internship",
-    "internship": r"supervis|mentor|encadr",
-    "apprenticeship": r"supervis|mentor|encadr",
+    # "previous internship/work experience" (Skypher), "An internship or thesis" (OVH), "en stage ou alternance ou poste"
+    # (Valeo): the candidate's past, audit 2026-10-17
+    "internship": r"supervis|mentor|encadr|\b(?:previous|prior|past)\b|\binclud|\bor (?:a )?thesis\b|\bou poste\b"
+                  # a careers-site footer, "check out internship and job opportunities" (Dassault Systèmes, 2026-10-21)
+                  r"|\binternships? (?:and|&|or) (?:job|career|graduate)|\b(?:jobs?|careers?) (?:and|&|or) internships?\b",
+    "apprenticeship": r"supervis|mentor|encadr|\bou poste\b",
     # a thesis named as the alternative to experience, or held, is the candidate's past (ADAY, 2026-09-29)
     "phd": r"\b(?:ou|or)\s+(?:une?\s+|a\s+)?(?:th[èe]se|doctorat|phd)\b|\btitulaire d['’](?:une?\s+)?(?:th[èe]se|doctorat)",
+    # freelance named as a source of the candidate's experience, not the offer (NewRocket, 2026-10-21)
+    "freelance": r"\bfreelance (?:work|experience|projects?)\b|\bexperience (?:through|from|including|gained)\b",
 }
 TEXT_ORDER = ("cdi", "cdd", "internship", "apprenticeship", "phd", "vie", "freelance")
 # "Fixed Term" is also what an internship is (Novartis labels its 6-month stages "Early Career (Fixed Term)",
@@ -583,7 +606,9 @@ YEARS_ASKED = (r"(?<!\d)\d{1,2}\s*\+\s*(?:(?:overall|total|combined|relevant)\s+
 # Both apostrophes: 10 postings of the 2026-09-29 sweep write "we’re".
 WE_ASK = (r"\bwe(?:['’]re| are)? (?:value|expect|require|need|want|seek|ask for|look(?:ing)? for)\b"
           r"|\bwhat we(?:['’]re| are)? looking for\b|\bnous recherchons\b|\bnous attendons\b")
-NICE_HEADER = r"^\W*(?:nice[- ]to[- ]haves?|bonus(?:es)?|preferred(?: qualifications?)?|pluses|a plus)\b"
+NICE_HEADER = (r"^\W*(?:nice[- ]to[- ]haves?|bonus(?:es)?|preferred(?: qualifications?)?|pluses|a plus"
+               r"|(?:highly )?desirable|bonus points?|good to have|it would be (?:great|nice) if(?: you have)?"
+               r"|what would make you stand out|ideally,? you(?:['’]ll| will)? (?:also )?have|atouts?|un plus)\b")   # "Highly Desirable" (Stability AI on Himalayas, 2026-10-14)
 # A header on a line of its own opens a section that runs to the next header ("Nice to have" / "3+ years of Rust")
 SECTION_NICE = NICE_HEADER + r"\W*$"
 SECTION_OTHER = (r"^\W*(?:requirements?|qualifications?|must[- ]haves?|required|what you(?:['’]ll| will)? (?:need|bring)"
@@ -591,7 +616,9 @@ SECTION_OTHER = (r"^\W*(?:requirements?|qualifications?|must[- ]haves?|required|
                  r"|comp[ée]tences requises|responsibilities|what you(?:['’]ll| will) do|missions?)\b|^[^.]{1,40}:\s*$")
 # "un plus" is a nice-to-have; "6 ans et plus" is "six years or more" (Docaposte, 2026-09-29)
 NICE_TO_HAVE = (r"\bpreferred\b|(?<!plus de )(?<!\bde )(?<!\bet )(?<!\bou )\bplus\b(?! de)|nice[- ]to[- ]have|\bbonus\b"
-                r"|ideally|souhait|appr[ée]ci")
+                r"|ideally|souhait|appr[ée]ci"
+                # "Preferably 5+ years" (DocuSketch), "idéalement … supérieure à 3 ans" (Dassault), audit 2026-10-17
+                r"|preferabl|id[ée]alement|de pr[ée]f[ée]rence|dans l['’]id[ée]al")
 # "Fort de 20 ans d'expérience, notre cabinet...", "With 15 years of experience in fintech, we serve...":
 # the company's history, not a requirement; nor are years of data, of age, or of residence.
 COMPANY_HISTORY = (r"\bfort de\b|\bfounded\b|\bsince \d{4}\b|\bdepuis (?:plus de )?\d+\s*ans\b|\bdepuis \d{4}\b|\bwe serve\b"
@@ -621,10 +648,38 @@ PHD_REQUIRED = r"ph\.?\s?d\b|doctora"
 PHD_LINE = r"^\W*(?:an?\s+)?(?:ph\.?\s?d\.?|doctorat)\b"
 MASTER_OK = r"\b(?:m\.?sc|masters?|master['’]s|m2|bac\s*\+\s*5|engineering degree|dipl[oô]me d['’]ing[ée]nieur)\b"
 # "PhD or equivalent research experience", "(or equivalent experience)": experience stands in for the degree
-EQUIVALENT = r"\bor equivalent\b|\bou [ée]quivalent|\bequivalent\b[^.]{0,30}\bexperience\b"
+# "Doctorat (ou niveau équivalent)" (Institut Curie, 2026-10-14) names a level, not only the degree
+# "4–6 years (or a strong recent graduate…)" (Aline), "5-6 years for senior levels" (Harmattan): not the ask
+YEARS_OR_GRADUATE = r"\bor (?:an? )?(?:strong |exceptional )?(?:recent )?(?:new )?grad(?:uate)?s?\b|\bfor (?:the )?senior[- ]levels?\b"
+EQUIVALENT = r"\bor equivalent\b|\bou (?:niveau |dipl[ôo]me )?[ée]quivalent|\bequivalent\b[^.]{0,30}\bexperience\b"
+# A required research record is the research-scientist level, PhD or not: "Strong academic research track record in
+# computer vision, ..." (Stability AI, 2026-10-14); "track record of shipping" is not
+RESEARCH_RECORD = (r"\b(?:academic|research|publication)\s+(?:research\s+)?track record\b|\btrack record of (?:\w+\s+){0,2}publi"
+                   r"|\bpublication (?:record|history)\b|\bfirst[- ]author(?:ed)? (?:papers?|publications?)\b"
+                   # Cohere, 2026-10-18: "One or more papers at top-tier
+                   # venues (such as NeurIPS, ICML ...)", "Track record of work on generalization ... through publications"
+                   r"|\b(?:papers?|publications?) (?:at|in) (?:top|leading|major|premier)[- ](?:tier )?(?:ml |ai )?(?:venues?|conferences?|journals?)"
+                   r"|\btrack record\b[^.]{0,80}\bthrough publications?\b")
+# The same bar in engineering words: the posting needs someone who has trained large models at scale (Cohere Modeling,
+# Post-Training, Data Analysis, 2026-10-18). Fine-tuning a model, or deploying one at scale, is not this.
+# "large-scale model training", "large-scale RL post-training"; not "deploying large-scale AI workflows ...; develop training
+# materials" (a support role, 2026-10-18 census: training as teaching)
+LARGE_SCALE_TRAINING = (r"\b(?:large[- ]scale|at scale)\s+(?:[\w-]+\s+){0,2}(?:pre-?|post-?)?training\b(?!\s+(?:materials?|sessions?|courses?))"
+                        r"|\bdistributed training (?:strateg|infrastructures?\b)"
+                        r"|\btraining (?:of )?(?:large|frontier|foundation) (?:language )?models? at scale\b"
+                        r"|\bexperience (?:in |with |on )?training (?:large (?:language )?models?|llms|foundation models)\b")
+# "seven (7) years", "Five years": a spelled number before the years becomes digits (Synthesia, 2026-10-14: read as 2)
+NUM_WORDS = {w: str(i) for i, w in enumerate("one two three four five six seven eight nine ten eleven twelve".split(), 1)}
+SPELLED_YEARS = re.compile(r"\b(" + "|".join(NUM_WORDS) + r")\s*(?:\(\s*\d{1,2}\s*\)\s*)?(?=\+?\s*(?:years?|yrs)\b)", re.I)
 # the posting's own word for the level: "This is a senior, research-oriented role" (Nucs AI); "senior engineers" is not
 SENIOR_ROLE = (r"\b(?:this|the)\s+(?:is\s+an?|role is(?:\s+an?)?|position is(?:\s+an?)?)\s+senior\b"
-               r"|\bc['’]est un poste (?:de )?senior\b")
+               r"|\bc['’]est un poste (?:de )?senior\b"
+               # the hire named in the body (job-search audit 2026-10-17: 5 of 176 A rows, e.g. Bioptimus "We are looking for a
+               # technical, execution-focused Senior Data Scientist", PMI "seeking a senior-level AI Engineer")
+               r"|\b(?:looking for|seeking|hiring|recruiting|recherchons|recrutons)\s+(?:an?\s+|une?\s+)?(?:[\w-]+,?\s+){0,3}?senior\b"
+               r"|(?<!at )\bsenior[- ]level\b|\b(?:poste|profil|renfort)\s+(?:de\s+)?(?:senior|confirm[ée]e?)\b")
+# several levels in one posting stay open (Orbitant "mid and senior-level AI Engineers", LinkedIn's "Mid-Senior Level")
+MULTI_LEVEL = r"\bmid(?:dle)?(?:[- ]|\s+(?:and|or|to)\s+)(?:senior|level)\b|\bjunior\b"
 # The years as a field, the value on the line under its label: "Niveau d'expérience minimum" / "3 - 5 ans" (CA-GIP),
 # "Niveau d'expérience min. requis" / "6 ans et plus" (Docaposte), 2026-09-29
 EXPERIENCE_LABEL = (r"^\W*(?:niveau d['’]exp[ée]rience|ann[ée]es d['’]exp[ée]rience|exp[ée]rience|experience(?: level)?"
@@ -676,7 +731,7 @@ def check_seniority(units: list[str], title: str) -> dict:
     """Years asked = the largest minimum the posting states outside nice-to-have clauses: "4+ years
     of software development, 2+ with React" asks for four (live posting, 2026-09-27)."""
     years, in_nice, nice_units = [], False, set()
-    units = join_fields(units)
+    units = [SPELLED_YEARS.sub(lambda m: NUM_WORDS[m.group(1).lower()] + " ", s) for s in join_fields(units)]
     for s in units:
         if re.search(SECTION_NICE, s, I):
             in_nice = True
@@ -693,7 +748,7 @@ def check_seniority(units: list[str], title: str) -> dict:
             continue                    # "With 15 years of experience in fintech, we serve 3M users."
         for c in clauses(s):
             # the experience word (or an ask) must sit in the clause with the years: "trusted us for 10 years; you bring experience"
-            if (re.search(NICE_TO_HAVE, c, I) or re.search(COMPANY_HISTORY, c, I)
+            if (re.search(NICE_TO_HAVE, c, I) or re.search(COMPANY_HISTORY, c, I) or re.search(YEARS_OR_GRADUATE, c, I)
                     or (re.search(YEARS_OF_THINGS, c, I) and not re.search(EXPERIENCE_CUE, c, I))
                     or not (re.search(EXPERIENCE_CUE, c, I) or re.search(YEARS_ASKED, c, I))):
                 continue
@@ -714,7 +769,18 @@ def check_seniority(units: list[str], title: str) -> dict:
             and not re.search(NICE_TO_HAVE, s, I) and not re.search(EQUIVALENT, s, I) and s not in phd]
     if phd:
         flags.append("PhD required")
-    if any(re.search(SENIOR_ROLE, s, I) for s in units):
+    record = [s for s in units if re.search(RESEARCH_RECORD, s, I) and s not in nice_units
+              and not re.search(NICE_TO_HAVE, s, I) and not re.search(NEGATED, s, I)
+              and not re.search(r"\bor (?:demonstrated|equivalent|proven)\b", s, I)]  # "...or demonstrated research potential" (Cohere)
+    if record:
+        flags.append("research track record required")
+        phd += record[:1]
+    scale = [s for s in units if re.search(LARGE_SCALE_TRAINING, s, I) and s not in nice_units
+             and not re.search(NICE_TO_HAVE, s, I) and not re.search(NEGATED, s, I)]
+    if scale:
+        flags.append("large-scale model training required")
+        phd += scale[:1]
+    if any(re.search(SENIOR_ROLE, s, I) and not re.search(MULTI_LEVEL, s, I) for s in units):
         flags.append("the posting calls the role senior")
     blockers = []
     for s in units + ([title] if title else []):
@@ -745,8 +811,18 @@ def check_seniority(units: list[str], title: str) -> dict:
 
 # ---------------------------------------------------------------- tier
 
+# a careers page that answers 200 with "this job is filled" (Phenom boards, 2026-10-21) is a closed posting
+CLOSED = re.compile(r"has been filled|is no longer (?:available|open|accepting)|no longer accepting applications|"
+                    r"position (?:has been|is) closed|job (?:posting )?(?:has )?expired|a [ée]t[ée] pourvu|n'est plus (?:disponible|ouvert)|"
+                    r"offre (?:a expir[ée]|n'est plus)", I)
+# Requirements a candidate without a doctorate or a research record cannot meet; they are blockers, not flags.
+OUT_OF_REACH = ("PhD required", "research track record required", "large-scale model training required")
+
+
 def suggest_tier(r: dict, years_cap: int | None = None) -> dict:
     c, b = [], []
+    if r.get("closed"):
+        c.append("posting closed: " + r["closed"][:80])
     if r["french"]["verdict"] == "required":
         c.append("French required")
     if r["remote"]["france_eligible"] == "no":
@@ -755,10 +831,11 @@ def suggest_tier(r: dict, years_cap: int | None = None) -> dict:
     if r["contract"]["type"] in ("internship", "apprenticeship", "phd", "vie"):
         c.append(f"contract is {r['contract']['type']}")
     c += [x["label"] for x in r["seniority"]["blockers"]]
+    c += [f for f in r["seniority"]["flags"] if f in OUT_OF_REACH]
     years = r["seniority"]["min_years"]
     if years is not None and years_cap is not None and years > years_cap:
         b.append(f"{years}+ years asked (cap {years_cap})")
-    b += r["seniority"]["flags"]
+    b += [f for f in r["seniority"]["flags"] if f not in OUT_OF_REACH]
     salary = r["salary"]["vs_floor"]
     if salary == "below":
         b.append("salary below the floor")
@@ -774,8 +851,15 @@ def suggest_tier(r: dict, years_cap: int | None = None) -> dict:
         b.append("French requirement unclear")
     if r["remote"]["france_eligible"] == "unclear":
         b.append("remote eligibility unclear" if r["remote"]["mode"] == "remote" else "place of work unclear")
-    if r["french"]["posting_language"] == "fr" and r["french"]["verdict"] in ("not_mentioned", "unclear"):
-        b.append("posting written in French")
+    fr_base = r["french"]["posting_language"] == "fr" and r["french"]["verdict"] in ("not_mentioned", "unclear")
+    if fr_base:
+        # Only a stated French requirement is out. A French-written posting stays B even with
+        # no English signal, since such teams may still work or interview in English ;
+        # the two same-day rules that sent these to C were withdrawn. The signals stay in the reason to read.
+        sig = ("team works in English" if r["french"].get("english_workplace") else
+               "international team" if r["french"].get("international_team") else
+               "English asked as a skill" if r["french"].get("english_skill") else "no English signal")
+        b.append(f"posting written in French ({sig})")
     tier = "C" if c else ("B" if b else "A")
     return {"tier": tier, "why": c + b or ["no blocker found; check the facts against the posting"]}
 
@@ -792,6 +876,10 @@ def check(text: str, title: str = "", location: str = "", salary_floor: float | 
         "salary": check_salary(units, salary_floor),
         "seniority": check_seniority(units, title),
     }
+    r["french"]["english_skill"] = [s for s in units if re.search(ENGLISH_SKILL, s, re.I)][:2]
+    r["french"]["english_workplace"] = [s for s in units if re.search(ENGLISH_WORKPLACE, s, re.I)][:2]
+    r["french"]["international_team"] = [s for s in units if re.search(INTERNATIONAL_TEAM, s, re.I)][:2]
+    r["closed"] = next((s for s in units[:40] if CLOSED.search(s)), "")
     r["suggested"] = suggest_tier(r, years_cap)
     return r
 
@@ -804,6 +892,7 @@ SELFTEST = [  # (text, field, expected) from real posting lines; the full corpus
     ("French is a plus", "french", "preferred"),
     ("Fluency in French is a significant advantage", "french", "preferred"),
     ("Langues : francais ou anglais", "french", "not_required"),
+    ("Un anglais professionnel, à l'écrit comme à l'oral. Le français est un confort, pas une obligation.", "french", "not_required"),
     ("Bon niveau d'anglais et de français", "french", "required"),
     ("We are a French company building AI for insurers.", "french", "not_mentioned"),
     ("CDI, Paris, 45 000 - 55 000 € brut annuel", "contract", "cdi"),

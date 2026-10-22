@@ -1,10 +1,12 @@
 # job-posting-checker
 
-![tests](https://github.com/CY-HYUN/job-posting-checker/actions/workflows/tests.yml/badge.svg)
+![tests](https://github.com/CY-HYUN/job-posting-checker/actions/workflows/tests.yml/badge.svg) [![Demo](https://img.shields.io/badge/demo-try%20it%20in%20the%20browser-2f54eb)](https://cy-hyun.github.io/job-posting-checker/)
+
+**Try it in the browser:** [live demo](https://cy-hyun.github.io/job-posting-checker/). Pick one of six example postings or paste your own; every answer is highlighted in the posting, and the result follows as you edit. Nothing is sent anywhere.
 
 Reads a job posting and tells you, with the exact sentence behind each answer, whether you can take the job from France: is French required, is the role remote and open to someone living in France, what contract it is, whether the salary clears your floor, and how many years of experience it really asks for. A second script pulls open postings straight from companies' public careers APIs.
 
-Built for people job hunting in France who do not read French well. Postings here mix French and English ("Français courant", "French is a plus", "CDD de 18 mois", "3 500 € bruts mensuels"), and keyword search gets them wrong: "French company" is not a language rule, "apprentissage" is machine learning, "5+ years is a plus" is not an ask. The rules were written against real posting lines, and **445 labelled cases** in `tests/` pin them.
+Built for people job hunting in France who do not read French well. Postings here mix French and English ("Français courant", "French is a plus", "CDD de 18 mois", "3 500 € bruts mensuels"), and keyword search gets them wrong: "French company" is not a language rule, "apprentissage" is machine learning, "5+ years is a plus" is not an ask. The rules were written against real posting lines, and **512 labelled cases** in `tests/` pin them.
 
 Python 3.10+ (tested on 3.12), standard library only. No API keys.
 
@@ -38,13 +40,15 @@ Output, [`examples/posting.json`](examples/posting.json):
 
 ```json
 {
- "french": {"verdict": "preferred", "evidence": ["[preferred] French is a plus."], "english_signals": [], "posting_language": "en"},
+ "french": {"verdict": "preferred", "evidence": ["[preferred] French is a plus."], "english_signals": [], "posting_language": "en",
+            "english_skill": ["Fluent English;"], "english_workplace": [], "international_team": []},
  "remote": {"mode": "hybrid", "france_eligible": "n/a", "france_eligible_if_remote": "unclear", "evidence": [], "timezone": []},
  "contract": {"type": "cdi", "months": null, "from": "text", "evidence": ["CDI (permanent contract), based in Paris."]},
  "salary": {"min_eur_year": 48000, "max_eur_year": 58000, "monthly_in_text": false, "vs_floor": "above",
             "evidence": "Salaire : 48 000 - 58 000 € brut annuel selon profil."},
  "seniority": {"min_years": 3, "flags": [],
                "evidence": ["3+ years of experience building machine learning systems in production."], "blockers": []},
+ "closed": "",
  "suggested": {"tier": "B", "why": ["3+ years asked (cap 2)"]}
 }
 ```
@@ -61,7 +65,8 @@ Note what it did not do: the "5+ years" under *Nice to have* is not the ask, and
 | `contract.type` | `cdi` · `cdd` · `internship` · `apprenticeship` · `phd` · `vie` · `freelance` · `unknown` | With the length in months when stated. |
 | `salary.vs_floor` | `above` · `straddles` · `below` · `no_floor_given` · `not_stated` · `other_currency` · `daily_rate` | Yearly gross EUR; monthly pay is multiplied by 12. Bonuses, relocation, budgets and funding rounds are not salary. |
 | `seniority` | `min_years`, `flags`, `blockers` | Years = the largest minimum outside nice-to-have sections. Blockers: nationality rule, security clearance, restricted research zone, another required language. |
-| `suggested.tier` | `A` · `B` · `C` | `C` = a hard blocker (French required, not open to France, internship, nationality...). `B` = something to check. `A` = nothing found. Each tier comes with its reasons. |
+| `closed` | the sentence, or empty | A careers page that still answers but says the job is filled or no longer open. |
+| `suggested.tier` | `A` · `B` · `C` | `C` = a hard blocker (French required, not open to France, internship, nationality, a closed posting, a required PhD, research record or large-scale model training...). `B` = something to check. `A` = nothing found. Each tier comes with its reasons. |
 
 Options for `posting_check.py`:
 
@@ -95,7 +100,7 @@ python posting_check.py one.txt --title "<title printed above>" --location "<loc
 ## Tests
 
 ```bash
-python tests/test_posting_check.py   # 445/445 cases pass
+python tests/test_posting_check.py   # 512/512 cases pass
 python tests/test_ats_fetch.py       # selftest ok
 ```
 
